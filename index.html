@@ -553,24 +553,30 @@ The general public is kindly requested to take adequate precautions to minimize 
             try {
                 // In a real implementation, you would make an actual API call here
                 // For demonstration, we'll simulate a response
-                setTimeout(() => {
-                    const mockResponse = {
-                        status: 'success',
-                        source: 'Department of Meteorology, Sri Lanka',
-                        data: {
-                            location: 'Colombo',
-                            temperature: '28°C',
-                            humidity: '78%',
-                            wind_speed: '15 km/h',
-                            condition: 'Partly Cloudy',
-                            forecast: 'Showers expected in the evening',
-                            warnings: ['Heavy rainfall warning', 'Strong winds advisory'],
-                            update_time: new Date().toISOString()
-                        }
-                    };
-                    
-                    apiResponse.textContent = JSON.stringify(mockResponse, null, 2);
-                }, 1500);
+                async function fetchMeteoData() {
+    apiResponse.innerHTML = '<div class="loading"></div> Fetching real-time data...';
+
+    try {
+        const response = await fetch('https://api.openweathermap.org/data/2.5/weather?q=Colombo&appid=YOUR_API_KEY&units=metric');
+        if (!response.ok) throw new Error('Failed to fetch weather');
+        const data = await response.json();
+
+        apiResponse.textContent = JSON.stringify({
+            status: 'success',
+            source: 'OpenWeatherMap',
+            data: {
+                location: data.name,
+                temperature: `${data.main.temp}°C`,
+                humidity: `${data.main.humidity}%`,
+                wind_speed: `${data.wind.speed} m/s`,
+                condition: data.weather[0].description,
+                update_time: new Date().toISOString()
+            }
+        }, null, 2);
+    } catch (error) {
+        apiResponse.textContent = `Error: ${error.message}`;
+    }
+}
             } catch (error) {
                 console.error('Error fetching Meteo data:', error);
                 apiResponse.textContent = `Error: ${error.message}`;
@@ -606,90 +612,38 @@ The general public is kindly requested to take adequate precautions to minimize 
         }
 
         // Fetch combined analysis using Apilage AI
-        async function fetchCombinedAnalysis() {
-            apiResponse.innerHTML = '<div class="loading"></div> Analyzing combined data with AI...';
-            
-            try {
-                // Using the Apilage AI API to analyze combined data
-                const response = await fetch(API_CONFIG.URL, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${API_CONFIG.KEY}`
-                    },
-                    body: JSON.stringify({
-                        model: API_CONFIG.MODEL,
-                        messages: [
-                            {
-                                role: 'user',
-                                content: `Analyze this weather data and provide a comprehensive assessment:
-                                
-                                Meteorological Data:
-                                - Depression intensified into deep depression
-                                - Located 120km southeast of Batticaloa
-                                - Expected to become cyclonic storm in 12 hours
-                                - Heavy rainfall (200mm+) in Northern, North-central provinces
-                                - Strong winds (60-70 kmph) across the island
-                                
-                                Additional Information from News Sources:
-                                - Emergency measures implemented in Eastern Province
-                                - Schools closed in affected areas
-                                - Fishermen advised not to go to sea
-                                
-                                Please provide:
-                                1. Risk assessment
-                                2. Recommended precautions
-                                3. Timeline of expected impacts
-                                4. Areas most at risk`
-                            }
-                        ]
-                    })
-                });
-                
-                if (!response.ok) {
-                    throw new Error(`API error: ${response.status}`);
-                }
-                
-                const data = await response.json();
-                
-                // Extract the AI response
-                const aiResponse = data.choices && data.choices[0] && data.choices[0].message 
-                    ? data.choices[0].message.content 
-                    : 'Analysis completed. No specific details available.';
-                
-                apiResponse.textContent = `AI ANALYSIS RESULT:\n\n${aiResponse}`;
-            } catch (error) {
-                console.error('Error fetching combined analysis:', error);
-                // Fallback to mock data if API fails
-                setTimeout(() => {
-                    const mockAnalysis = `COMBINED WEATHER ANALYSIS
+       async function fetchCombinedAnalysis() {
+    apiResponse.innerHTML = '<div class="loading"></div> Analyzing combined data...';
 
-RISK ASSESSMENT: HIGH
-- The developing cyclonic storm poses significant threat to Eastern and Northern provinces
-- Very heavy rainfall may cause flooding in low-lying areas
-- Strong winds may damage infrastructure and disrupt power supply
+    try {
+        const meteoData = await fetchMeteoDataReturnJSON();
+        const helakuruData = await fetchHelakuruDataReturnJSON();
 
-RECOMMENDED PRECAUTIONS:
-1. Avoid unnecessary travel in affected areas
-2. Secure loose objects outdoors
-3. Prepare emergency kits with essentials
-4. Follow official advisories from Disaster Management Center
+        const response = await fetch(API_CONFIG.URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${API_CONFIG.KEY}`
+            },
+            body: JSON.stringify({
+                model: API_CONFIG.MODEL,
+                messages: [
+                    {
+                        role: 'user',
+                        content: `Analyze this data:\nWeather: ${JSON.stringify(meteoData)}\nNews: ${JSON.stringify(helakuruData)}`
+                    }
+                ]
+            })
+        });
 
-TIMELINE:
-- Next 12 hours: Storm intensification, increasing winds
-- 12-24 hours: Peak rainfall in Northern and Eastern provinces
-- 24-48 hours: Gradual weakening as system moves northwest
+        const data = await response.json();
+        const aiResponse = data.choices[0].message.content;
+        apiResponse.textContent = aiResponse;
 
-HIGHEST RISK AREAS:
-- Batticaloa, Trincomalee, Jaffna, Mullaitivu
-- Low-lying areas near rivers and coastal regions
-
-Stay tuned for updates from official sources.`;
-                    
-                    apiResponse.textContent = mockAnalysis;
-                }, 2000);
-            }
-        }
+    } catch (error) {
+        apiResponse.textContent = `Error: ${error.message}`;
+    }
+}
 
         // Initialize the application
         document.addEventListener('DOMContentLoaded', init);
