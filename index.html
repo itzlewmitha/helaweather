@@ -551,7 +551,7 @@ The general public is kindly requested to take adequate precautions to minimize 
     apiResponse.innerHTML = '<div class="loading"></div> Fetching real-time data...';
 
     try {
-        const response = await fetch('https://api.openweathermap.org/data/2.5/weather?q=Colombo&appid=YOUR_API_KEY&units=metric');
+        const response = await fetch('https://api.openweathermap.org/data/2.5/weather?q=Colombo&appid=38952a629f2a0536906d8f6bb571c00f&units=metric');
         if (!response.ok) throw new Error('Failed to fetch weather');
         const data = await response.json();
 
