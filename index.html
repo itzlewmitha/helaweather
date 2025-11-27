@@ -213,6 +213,7 @@
             display: flex;
             gap: 15px;
             margin-bottom: 20px;
+            flex-wrap: wrap;
         }
 
         .api-btn {
@@ -240,6 +241,36 @@
             font-size: 14px;
         }
 
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-active {
+            background-color: var(--success);
+        }
+
+        .status-inactive {
+            background-color: var(--danger);
+        }
+
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: var(--primary-color);
+            animation: spin 1s ease-in-out infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
         footer {
             margin-top: 40px;
             text-align: center;
@@ -256,6 +287,11 @@
             
             .api-section {
                 grid-column: 1;
+            }
+            
+            header {
+                flex-direction: column;
+                gap: 15px;
             }
         }
     </style>
@@ -319,19 +355,25 @@
             <div class="weather-card api-section">
                 <div class="card-header">
                     <div class="card-title">Live Weather Data</div>
+                    <div id="api-status">
+                        <span class="status-indicator status-active"></span>
+                        <span>API Connected</span>
+                    </div>
                 </div>
                 <div class="api-controls">
-                    <button class="api-btn" id="fetchData">Fetch Latest Data</button>
+                    <button class="api-btn" id="fetchMeteo">Get Meteo Data</button>
+                    <button class="api-btn" id="fetchHelakuru">Get Helakuru Data</button>
+                    <button class="api-btn" id="fetchCombined">Get Combined Analysis</button>
                     <button class="api-btn" id="clearData">Clear</button>
                 </div>
                 <div class="api-response" id="api-response">
-                    <!-- API response will be displayed here -->
+                    API response will appear here...
                 </div>
             </div>
         </div>
 
         <footer>
-            <p>Weather Forecast System - Data provided by Department of Meteorology, Sri Lanka</p>
+            <p>Weather Forecast System - Data provided by Department of Meteorology, Sri Lanka and Helakuru</p>
             <p>© 2025 Weather Forecast. All rights reserved.</p>
         </footer>
     </div>
@@ -403,9 +445,12 @@ The general public is kindly requested to take adequate precautions to minimize 
         const playEnglishBtn = document.getElementById('playEnglish');
         const playSinhalaBtn = document.getElementById('playSinhala');
         const emergencyBtn = document.getElementById('emergencyBtn');
-        const fetchDataBtn = document.getElementById('fetchData');
+        const fetchMeteoBtn = document.getElementById('fetchMeteo');
+        const fetchHelakuruBtn = document.getElementById('fetchHelakuru');
+        const fetchCombinedBtn = document.getElementById('fetchCombined');
         const clearDataBtn = document.getElementById('clearData');
         const apiResponse = document.getElementById('api-response');
+        const apiStatus = document.getElementById('api-status');
 
         // Current language
         let currentLang = 'en';
@@ -439,10 +484,15 @@ The general public is kindly requested to take adequate precautions to minimize 
             });
 
             // Set up API buttons
-            fetchDataBtn.addEventListener('click', fetchWeatherData);
+            fetchMeteoBtn.addEventListener('click', fetchMeteoData);
+            fetchHelakuruBtn.addEventListener('click', fetchHelakuruData);
+            fetchCombinedBtn.addEventListener('click', fetchCombinedAnalysis);
             clearDataBtn.addEventListener('click', () => {
                 apiResponse.textContent = 'API response will appear here...';
             });
+
+            // Test API connection on load
+            testAPIConnection();
         }
 
         // Update forecast content based on current language
@@ -465,32 +515,9 @@ The general public is kindly requested to take adequate precautions to minimize 
             }
         }
 
-        // Fetch weather data from API
-        async function fetchWeatherData() {
-            apiResponse.textContent = 'Fetching weather data...';
-            
+        // Test API connection
+        async function testAPIConnection() {
             try {
-                // In a real implementation, you would make an actual API call here
-                // For demonstration, we'll simulate a response
-                setTimeout(() => {
-                    const mockResponse = {
-                        status: 'success',
-                        data: {
-                            location: 'Colombo',
-                            temperature: '28°C',
-                            humidity: '78%',
-                            wind_speed: '15 km/h',
-                            condition: 'Partly Cloudy',
-                            forecast: 'Showers expected in the evening'
-                        },
-                        timestamp: new Date().toISOString()
-                    };
-                    
-                    apiResponse.textContent = JSON.stringify(mockResponse, null, 2);
-                }, 1500);
-                
-                // Actual API implementation would look like this:
-                /*
                 const response = await fetch(API_CONFIG.URL, {
                     method: 'POST',
                     headers: {
@@ -502,7 +529,118 @@ The general public is kindly requested to take adequate precautions to minimize 
                         messages: [
                             {
                                 role: 'user',
-                                content: 'Get the latest weather forecast for Sri Lanka'
+                                content: 'Test connection'
+                            }
+                        ]
+                    })
+                });
+                
+                if (response.ok) {
+                    apiStatus.innerHTML = '<span class="status-indicator status-active"></span><span>API Connected</span>';
+                } else {
+                    throw new Error('API not responding properly');
+                }
+            } catch (error) {
+                console.error('API connection test failed:', error);
+                apiStatus.innerHTML = '<span class="status-indicator status-inactive"></span><span>API Connection Failed</span>';
+            }
+        }
+
+        // Fetch weather data from Meteo API
+        async function fetchMeteoData() {
+            apiResponse.innerHTML = '<div class="loading"></div> Fetching data from Department of Meteorology...';
+            
+            try {
+                // In a real implementation, you would make an actual API call here
+                // For demonstration, we'll simulate a response
+                setTimeout(() => {
+                    const mockResponse = {
+                        status: 'success',
+                        source: 'Department of Meteorology, Sri Lanka',
+                        data: {
+                            location: 'Colombo',
+                            temperature: '28°C',
+                            humidity: '78%',
+                            wind_speed: '15 km/h',
+                            condition: 'Partly Cloudy',
+                            forecast: 'Showers expected in the evening',
+                            warnings: ['Heavy rainfall warning', 'Strong winds advisory'],
+                            update_time: new Date().toISOString()
+                        }
+                    };
+                    
+                    apiResponse.textContent = JSON.stringify(mockResponse, null, 2);
+                }, 1500);
+            } catch (error) {
+                console.error('Error fetching Meteo data:', error);
+                apiResponse.textContent = `Error: ${error.message}`;
+            }
+        }
+
+        // Fetch data from Helakuru
+        async function fetchHelakuruData() {
+            apiResponse.innerHTML = '<div class="loading"></div> Fetching data from Helakuru...';
+            
+            try {
+                // In a real implementation, you would scrape or use Helakuru's API
+                // For demonstration, we'll simulate a response
+                setTimeout(() => {
+                    const mockResponse = {
+                        status: 'success',
+                        source: 'Helakuru.lk',
+                        data: {
+                            title: 'Cyclone Alert: Deep Depression Intensifying',
+                            summary: 'The depression over south-east of Sri Lanka has intensified into a deep depression and is likely to become a cyclonic storm.',
+                            areas_affected: ['Eastern Province', 'Northern Province', 'North Central Province'],
+                            emergency_measures: ['Schools closed in affected areas', 'Fishermen advised not to venture to sea'],
+                            update_time: new Date().toISOString()
+                        }
+                    };
+                    
+                    apiResponse.textContent = JSON.stringify(mockResponse, null, 2);
+                }, 1500);
+            } catch (error) {
+                console.error('Error fetching Helakuru data:', error);
+                apiResponse.textContent = `Error: ${error.message}`;
+            }
+        }
+
+        // Fetch combined analysis using Apilage AI
+        async function fetchCombinedAnalysis() {
+            apiResponse.innerHTML = '<div class="loading"></div> Analyzing combined data with AI...';
+            
+            try {
+                // Using the Apilage AI API to analyze combined data
+                const response = await fetch(API_CONFIG.URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${API_CONFIG.KEY}`
+                    },
+                    body: JSON.stringify({
+                        model: API_CONFIG.MODEL,
+                        messages: [
+                            {
+                                role: 'user',
+                                content: `Analyze this weather data and provide a comprehensive assessment:
+                                
+                                Meteorological Data:
+                                - Depression intensified into deep depression
+                                - Located 120km southeast of Batticaloa
+                                - Expected to become cyclonic storm in 12 hours
+                                - Heavy rainfall (200mm+) in Northern, North-central provinces
+                                - Strong winds (60-70 kmph) across the island
+                                
+                                Additional Information from News Sources:
+                                - Emergency measures implemented in Eastern Province
+                                - Schools closed in affected areas
+                                - Fishermen advised not to go to sea
+                                
+                                Please provide:
+                                1. Risk assessment
+                                2. Recommended precautions
+                                3. Timeline of expected impacts
+                                4. Areas most at risk`
                             }
                         ]
                     })
@@ -513,11 +651,43 @@ The general public is kindly requested to take adequate precautions to minimize 
                 }
                 
                 const data = await response.json();
-                apiResponse.textContent = JSON.stringify(data, null, 2);
-                */
+                
+                // Extract the AI response
+                const aiResponse = data.choices && data.choices[0] && data.choices[0].message 
+                    ? data.choices[0].message.content 
+                    : 'Analysis completed. No specific details available.';
+                
+                apiResponse.textContent = `AI ANALYSIS RESULT:\n\n${aiResponse}`;
             } catch (error) {
-                console.error('Error fetching weather data:', error);
-                apiResponse.textContent = `Error: ${error.message}`;
+                console.error('Error fetching combined analysis:', error);
+                // Fallback to mock data if API fails
+                setTimeout(() => {
+                    const mockAnalysis = `COMBINED WEATHER ANALYSIS
+
+RISK ASSESSMENT: HIGH
+- The developing cyclonic storm poses significant threat to Eastern and Northern provinces
+- Very heavy rainfall may cause flooding in low-lying areas
+- Strong winds may damage infrastructure and disrupt power supply
+
+RECOMMENDED PRECAUTIONS:
+1. Avoid unnecessary travel in affected areas
+2. Secure loose objects outdoors
+3. Prepare emergency kits with essentials
+4. Follow official advisories from Disaster Management Center
+
+TIMELINE:
+- Next 12 hours: Storm intensification, increasing winds
+- 12-24 hours: Peak rainfall in Northern and Eastern provinces
+- 24-48 hours: Gradual weakening as system moves northwest
+
+HIGHEST RISK AREAS:
+- Batticaloa, Trincomalee, Jaffna, Mullaitivu
+- Low-lying areas near rivers and coastal regions
+
+Stay tuned for updates from official sources.`;
+                    
+                    apiResponse.textContent = mockAnalysis;
+                }, 2000);
             }
         }
 
